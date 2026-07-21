@@ -1,5 +1,7 @@
-// Vercel serverless entry point
-// Vercel calls this file for every request — it exports the Express app
 const app = require('../src/app');
 
-module.exports = app;
+// Vercel serverless handler
+// All requests are rewritten here via vercel.json rewrites
+module.exports = (req, res) => {
+  app(req, res);
+};

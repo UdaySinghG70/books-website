@@ -31,9 +31,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ── Static uploads (local dev only) ──────────────────────────────────────────
-// On Vercel the filesystem is read-only — uploaded covers won't be served here
 if (!process.env.VERCEL) {
-  const path = require('path');
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 }
 
