@@ -30,9 +30,12 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── Static uploads ────────────────────────────────────────────────────────────
-// Note: filesystem is ephemeral on Vercel — use Cloudinary for persistent uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// ── Static uploads (local dev only) ──────────────────────────────────────────
+// On Vercel the filesystem is read-only — uploaded covers won't be served here
+if (!process.env.VERCEL) {
+  const path = require('path');
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+}
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/auth',       authRoutes);
