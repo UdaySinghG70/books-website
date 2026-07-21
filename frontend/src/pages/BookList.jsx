@@ -11,10 +11,11 @@ export default function BookList() {
     setLoading(true);
     try {
       const res = await api.get(`/books?page=${page}&limit=20`);
-      setBooks(res.data.books);
-      setPagination(res.data.pagination);
+      setBooks(res.data.books || []);
+      setPagination(res.data.pagination || { page: 1, totalPages: 1, total: 0 });
     } catch (err) {
       console.error(err);
+      setBooks([]);
     } finally {
       setLoading(false);
     }

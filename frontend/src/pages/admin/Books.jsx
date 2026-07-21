@@ -28,9 +28,12 @@ export default function AdminBooks() {
     setLoading(true);
     try {
       const res = await api.get(`/books?page=${p}&limit=10`);
-      setBooks(res.data.books);
-      setTotalPages(res.data.pagination.totalPages);
-      setTotal(res.data.pagination.total);
+      setBooks(res.data.books || []);
+      setTotalPages(res.data.pagination?.totalPages || 1);
+      setTotal(res.data.pagination?.total || 0);
+    } catch (err) {
+      console.error(err);
+      setBooks([]);
     } finally {
       setLoading(false);
     }
