@@ -30,17 +30,19 @@ const saveUploadedFile = (file) => {
 
 const getBooks = async (req, res) => {
   try {
-    const page   = parseInt(req.query.page)  || 1;
-    const limit  = parseInt(req.query.limit) || PAGE_SIZE;
+    const page   = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit  = Math.max(1, parseInt(req.query.limit) || PAGE_SIZE);
     const offset = (page - 1) * limit;
 
+    // Interpolate LIMIT/OFFSET directly — mysql2 prepared statements
+    // fail with ER_WRONG_ARGUMENTS on some MySQL versions when passing
+    // integers as bind params for LIMIT/OFFSET
     const [books] = await db.execute(
       `SELECT b.*, c.name AS category_name, c.level AS category_level, c.parent_id AS category_parent_id
        FROM books b
        LEFT JOIN categories c ON b.category_id = c.id
        ORDER BY b.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [limit, offset]
+       LIMIT ${limit} OFFSET ${offset}`
     );
 
     const [[{ total }]] = await db.execute('SELECT COUNT(*) AS total FROM books');
