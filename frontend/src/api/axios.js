@@ -1,8 +1,13 @@
 import axios from 'axios';
 
-const api = axios.create({
-  baseURL: '/api',
-});
+// In development, Vite proxies /api → localhost:5000 (see vite.config.js).
+// In production (Vercel), VITE_API_URL must be set to your Railway backend URL.
+// e.g.  VITE_API_URL=https://books-backend.up.railway.app
+const baseURL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api';
+
+const api = axios.create({ baseURL });
 
 // Attach JWT token to every request if present
 api.interceptors.request.use((config) => {
@@ -13,7 +18,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 globally - clear token and redirect to login
+// Handle 401 globally — clear stale token
 api.interceptors.response.use(
   (response) => response,
   (error) => {

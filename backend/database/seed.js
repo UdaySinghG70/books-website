@@ -4,16 +4,37 @@
 require('dotenv').config();
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
+const dns = require('dns');
+
+// Force Google DNS — bypasses ISP/router DNS that may block aivencloud.com
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 async function main() {
-  const db = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'booksdb',
-    multipleStatements: true,
-  });
+  let connConfig;
+
+  if (process.env.DATABASE_URL) {
+    const url = new URL(process.env.DATABASE_URL.replace('?ssl-mode=REQUIRED', ''));
+    connConfig = {
+      host:     url.hostname,
+      port:     parseInt(url.port) || 3306,
+      user:     url.username,
+      password: url.password,
+      database: url.pathname.replace('/', ''),
+      ssl: { rejectUnauthorized: false },
+      multipleStatements: true,
+    };
+  } else {
+    connConfig = {
+      host:               process.env.DB_HOST     || 'localhost',
+      port:               parseInt(process.env.DB_PORT) || 3306,
+      user:               process.env.DB_USER     || 'root',
+      password:           process.env.DB_PASSWORD || '',
+      database:           process.env.DB_NAME     || 'booksdb',
+      multipleStatements: true,
+    };
+  }
+
+  const db = await mysql.createConnection(connConfig);
 
   console.log('Connected. Seeding...');
 

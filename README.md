@@ -7,7 +7,6 @@ A full stack web application for browsing, managing, and favoriting books. Built
 ## Table of Contents
 
 - [What It Does](#what-it-does)
-- [Screenshots](#screenshots)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Features](#features)
@@ -15,6 +14,7 @@ A full stack web application for browsing, managing, and favoriting books. Built
 - [Local Setup](#local-setup)
 - [Default Accounts](#default-accounts)
 - [Environment Variables](#environment-variables)
+- [Deploying to Production](#deploying-to-production-vercel--railway)
 
 ---
 
@@ -447,3 +447,105 @@ All backend configuration lives in `backend/.env`:
 
 **Re-seeding the database**
 - Run `node database/seed.js` again — it clears favorites and books before re-inserting, so it's safe to run multiple times
+
+---
+
+## Deploying to Production (Vercel + Railway)
+
+The app is split across two platforms:
+
+| Layer | Platform | Free tier |
+|---|---|---|
+| Frontend (React) | Vercel | Yes — unlimited |
+| Backend (Express) | Railway | Yes — $5 credit/month |
+| Database (MySQL) | Railway MySQL plugin | Yes — included |
+
+---
+
+### Step 1 — Deploy MySQL on Railway
+
+1. Go to [railway.app](https://railway.app) and sign in with GitHub
+2. Click **New Project → Database → MySQL**
+3. Once created, click the MySQL service → **Variables** tab
+4. Copy the `DATABASE_URL` value — you will need it shortly
+
+**Create tables:** click the MySQL service → **Query** tab, paste the full contents of `backend/database/init.sql`, and click **Run**.
+
+**Seed books and users:** temporarily copy the Railway `DATABASE_URL` into your local `backend/.env`:
+```env
+DATABASE_URL=mysql://root:xxxx@xxxx.railway.app:3306/railway
+```
+Then run locally:
+```bash
+cd backend
+node database/seed.js
+```
+Remove `DATABASE_URL` from local `.env` afterwards and restore the original variables.
+
+---
+
+### Step 2 — Deploy the Backend on Railway
+
+1. In the same Railway project click **New Service → GitHub Repo**
+2. Select your repository and set **Root Directory** → `backend`
+3. Railway detects Node.js automatically and runs `node src/index.js` via `railway.json`
+4. Go to **Variables** tab and add:
+
+| Key | Value |
+|---|---|
+| `DATABASE_URL` | _(paste from MySQL service)_ |
+| `JWT_SECRET` | any long random string |
+| `JWT_EXPIRES_IN` | `7d` |
+| `PORT` | `5000` |
+| `CLIENT_URL` | `https://your-app.vercel.app` _(fill in after Step 3)_ |
+
+5. Click **Deploy**. Once green, copy the public domain Railway assigns, e.g.:
+   `https://books-backend-production.up.railway.app`
+
+---
+
+### Step 3 — Deploy the Frontend on Vercel
+
+1. Go to [vercel.com](https://vercel.com) and sign in with GitHub
+2. Click **Add New → Project** → import your GitHub repository
+3. Set **Root Directory** → `frontend`
+4. Framework preset will auto-detect as **Vite**
+5. Under **Environment Variables** add:
+
+| Key | Value |
+|---|---|
+| `VITE_API_URL` | `https://books-backend-production.up.railway.app` |
+
+   _(your Railway backend URL from Step 2 — no trailing slash)_
+
+6. Click **Deploy**. Vercel gives you a URL like `https://books-website.vercel.app`
+
+---
+
+### Step 4 — Connect CORS
+
+1. Go back to Railway → backend service → Variables
+2. Update `CLIENT_URL` to your Vercel URL:
+```
+CLIENT_URL=https://books-website.vercel.app
+```
+3. Railway redeploys automatically
+
+Your app is fully live. Open the Vercel URL in your browser.
+
+---
+
+### Quick Checklist
+
+- [ ] MySQL tables created on Railway (init.sql)
+- [ ] Seed run against Railway DB (node database/seed.js)
+- [ ] Backend deployed on Railway with all env vars set
+- [ ] `VITE_API_URL` set on Vercel pointing to Railway backend
+- [ ] `CLIENT_URL` on Railway updated to Vercel frontend URL
+- [ ] Visit Vercel URL — books load, login works
+
+---
+
+### File Upload Note
+
+The local `uploads/` folder **does not persist** on Railway — the filesystem resets on each deploy. Books seeded with Open Library cover URLs are not affected. If you want admins to upload custom covers in production, integrate [Cloudinary](https://cloudinary.com) (free tier available) and replace the Multer disk storage with Cloudinary's Node SDK.
